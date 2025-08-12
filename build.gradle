@@ -1,0 +1,122 @@
+buildscript {
+  ext.kotlinVersion = '2.1.20'
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:8.10.1'
+    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+  }
+}
+
+ext {
+  // From e.g. https://source.android.com/setup/start/build-numbers
+  // Android 14 	     34  Android14
+  // Android 13 	     33  Android13
+  // Android 12L         32  Android12L
+  // Android 12 	     31  Android12
+  // Android 11          30  Android11
+  // Android 10          29  Android10
+  // Android 9.0         28  PIE
+  // Android 8.1         27  OREO_MR1
+  // Android 8.0         26  OREO
+  // Android 7.1.1, 7.1  25  NOUGAT_MR1
+  // Android 7.0         24  NOUGAT
+  // Android 6.0         23  MARSHMALLOW
+  // Android 5.1         22  LOLLIPOP_MR1
+  // Android 5.0         21  LOLLIPOP
+  // Android 4.4W        20  KITKAT_WATCH
+  // Android 4.4         19  KITKAT
+  // Android 4.3         18  JELLY_BEAN_MR2
+  // Android 4.2, 4.2.2  17  JELLY_BEAN_MR1
+
+  // Remember to keep these values in sync with .travis.yml
+  compileSdkVersion=34
+  minSdkVersion=33
+  targetSdkVersion=34
+
+  // java version
+  javaVersion = JavaVersion.VERSION_11
+
+  // centrally manage some other dependencies
+  mapsforgeVersion = '0.20.0'
+  osmdroidVersion = '6.1.18'
+
+  // test dependencies
+  assertjVersion = '3.25.3'
+  junitVersion = '4.13.2'
+  mockitoVersion = '5.11.0'
+  robolectricVersion = '4.14.1'
+}
+
+// Configure common settings in all projects
+subprojects {
+  if (!file("${projectDir}/build.gradle").exists())
+    return
+
+  gradle.projectsEvaluated {
+    tasks.withType(JavaCompile).configureEach {
+      options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
+    tasks.withType(Test).tap {
+      configureEach {
+        testLogging {
+          exceptionFormat 'full'
+          showCauses true
+          showExceptions true
+          showStackTraces true
+          events = ['passed', 'failed', 'skipped']
+        }
+      }
+    }
+  }
+
+  buildscript {
+    repositories {
+      mavenCentral()
+      google() // required for Android plugins
+    }
+  }
+
+  repositories {
+    mavenCentral()
+    google() // required for Android libraries
+    maven { url "https://jitpack.io" } // required for https://github.com/smart-fun/XmlToJson
+  }
+
+  if (projectDir.getName() == 'cyclestreets.app') {
+    apply plugin: 'com.android.application'
+  } else {
+    apply plugin: 'com.android.library'
+  }
+
+  apply plugin: 'kotlin-android'
+
+  android {
+    compileSdkVersion rootProject.ext.compileSdkVersion
+
+    compileOptions {
+      sourceCompatibility rootProject.ext.javaVersion
+      targetCompatibility rootProject.ext.javaVersion
+    }
+    kotlinOptions {
+      jvmTarget = '11'
+    }
+
+    defaultConfig {
+      minSdkVersion rootProject.ext.minSdkVersion
+      targetSdkVersion rootProject.ext.targetSdkVersion
+    }
+
+    lintOptions {
+      // Required due to strictness of the Android developer tools.  See lint.xml for full details.
+      lintConfig rootProject.file('gradle/lint.xml')
+
+      // Kotlin (nullability) interop check - potentially useful but quite noisy
+      // check 'Interoperability'
+    }
+
+    buildFeatures.viewBinding = true
+  }
+}

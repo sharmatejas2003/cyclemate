@@ -1,0 +1,46 @@
+language: android
+sudo: false
+dist: focal
+jdk: openjdk17
+
+branches:
+  only:
+    - master
+
+# Get the full commit history (required to derive our version code, see the root build.gradle)
+git:
+  depth: false
+
+env:
+  global:
+    # Remember to keep these four values in sync with values in the root build.gradle file
+    - compileSdkVersion=34
+    - minSdkVersion=33
+    - targetSdkVersion=34
+    # For the decryption of secrets needed to sign and publish our artifacts
+    - secure: "LipL0wPv0uQrKitaeGxCpoQsx5sl/Pg/DtQv4S7Bi52DxfArgvD2hPB0TWgkgYGJPfENHLEyqg+H+/v2nON3IXY+cnsd+TW+P1T03/52D56ieSKGVtVtSYUOZUgoyxIIvRZWFh/UNg+AmZIjOCTJDLitBTUxD8kWux8NjhIqZow="
+
+android:
+  components:
+    - tools  # to download the latest listing of what's available to download
+    - platform-tools
+    - tools  # to install up-to-date Android SDK tools
+    - build-tools
+
+    # SDK versions
+    - android-${compileSdkVersion}
+
+before_install:
+  - ./ciLicense.sh
+  - sudo pip install requests
+  - touch $HOME/.android/repositories.cfg
+  - yes | sdkmanager "platforms;android-34"
+  - yes | sdkmanager "build-tools;34.0.0"
+
+install:
+  - ls -l /usr/lib/jvm/
+  - ./checkPoiTypeIcons.sh
+  - ./gradlew build -x lint
+
+script:
+  - ./ciPublish.sh
